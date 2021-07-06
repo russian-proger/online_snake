@@ -15,5 +15,8 @@
   "bugs": {
     "url": "https://github.com/russian-proger/online_snake/issues"
   },
-  "homepage": "https://github.com/russian-proger/online_snake#readme"
+  "homepage": "https://github.com/russian-proger/online_snake#readme",
+  "dependencies": {
+    "ws": "^7.5.2"
+  }
 }
