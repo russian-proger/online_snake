@@ -18,15 +18,51 @@ const DIRECTIONS = ({
 // Карта цветов
 let colorsMap = new Array(MAX_HEIGHT).fill(null).map(() => new Array(MAX_WIDTH));
 
-let player = new Player();
+/** @type {Player} */
+let player;
 
 function Player() {
     this.x = 0;
     this.y = 0;
+
     this.color = "#00ff00";
     this.direction = DIRECTIONS.Right;
 
-    this.update = function() {
+    /**
+     * @param {KeyboardEvent} ev
+     */
+    const onKeyDown = (ev) => {
+        switch (ev.key) {
+            case "w":
+            case "ArrowUp": {
+                this.direction = DIRECTIONS.Up;
+                break;
+            }
+            case "s":
+            case "ArrowDown": {
+                this.direction = DIRECTIONS.Down;
+                break;
+            }
+            case "a":
+            case "ArrowLeft": {
+                this.direction = DIRECTIONS.Left;
+                break;
+            }
+            case "d":
+            case "ArrowRight": {
+                this.direction = DIRECTIONS.Right;
+                break;
+            }
+        }
+    }
+
+    // Вызывается один раз
+    this.init = () => {
+        window.addEventListener('keydown', onKeyDown);
+    }
+
+    // Функция движения
+    const move = () => {
         switch (this.direction) {
             case DIRECTIONS.Left: {
                 --this.x;
@@ -45,10 +81,31 @@ function Player() {
                 break;
             }
         }
+
+        if (this.x < 0) this.x += MAX_WIDTH ;
+        if (this.y < 0) this.y += MAX_HEIGHT;
+        
+        if (this.x >= MAX_WIDTH ) this.x %= MAX_WIDTH ;
+        if (this.y >= MAX_HEIGHT) this.y %= MAX_HEIGHT;
     }
 
+    let lastUpdate = 0;
+    // Функция обновления
+    this.update = () => {
+        let now = Date.now();
+        if (now - lastUpdate > 100) {
+            lastUpdate = now;
+            move();
+        }
+    }
+
+    // Функция отрисовки объекта на карте
     this.render = function() {
         colorsMap[this.y][this.x] = this.color;
+    }
+
+    this.release = () => {
+        window.removeEventListener('keydown', onKeyDown);
     }
 }
 
@@ -86,6 +143,9 @@ function render() {
 function init() {
     canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
+
+    player = new Player();
+    player.init();
 
     render();
 }
