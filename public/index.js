@@ -4,9 +4,9 @@
 const canvas     = document.getElementById('canvas');
 const context    = canvas.getContext('2d');
 
-const MAX_WIDTH  = 30; // Кол-во клеток ширины
-const MAX_HEIGHT = 30; // Кол-во клеток высоты
-const CELL_WIDTH = 20; // Размер клетки в пикселях
+const MAX_WIDTH  = 80; // Кол-во клеток ширины
+const MAX_HEIGHT = 80; // Кол-во клеток высоты
+const CELL_WIDTH = 10; // Размер клетки в пикселях
 
 const DIRECTIONS = ({
     Left: "left",
@@ -17,6 +17,41 @@ const DIRECTIONS = ({
 
 // Карта цветов
 let colorsMap = new Array(MAX_HEIGHT).fill(null).map(() => new Array(MAX_WIDTH));
+
+/** @type {Network} */
+let network;
+let positions = [];
+function Network() {
+    /** @type {WebSocket} */
+    this.ws;
+    this.isReady = false;
+
+    this.init = () => {
+        this.ws = new WebSocket(`ws://${window.location.host}:8080`);
+        
+        this.ws.onopen = () => {
+            console.log("Установлено соединение с сервером");
+            this.isReady = true;
+        }
+
+        this.ws.onmessage = ev => {
+            let json = JSON.parse(ev.data);
+            positions = Object.values(json);
+        }
+
+        this.ws.onclose = () => {
+            console.warn("Соединение с сервером прервано");
+            this.isReady = false;
+        }
+    }
+
+    this.sendPosition = (x, y) => {
+        if (this.isReady) {
+            let data = ({ x, y });
+            this.ws.send(JSON.stringify(data));
+        }
+    }
+}
 
 /** @type {Player} */
 let player;
@@ -93,9 +128,10 @@ function Player() {
     // Функция обновления
     this.update = () => {
         let now = Date.now();
-        if (now - lastUpdate > 100) {
+        if (now - lastUpdate > 30) {
             lastUpdate = now;
             move();
+            network.sendPosition(this.x, this.y);
         }
     }
 
@@ -119,6 +155,10 @@ function update() {
     }
 
     player.update();
+    positions.forEach(v => {
+        colorsMap[v.y][v.x] = "#ffff00";
+    })
+
     player.render();
 }
 
@@ -131,18 +171,21 @@ function render() {
     for (let i = 0; i < MAX_HEIGHT; ++i) {
         for (let j = 0; j < MAX_WIDTH; ++j) {
             context.fillStyle = colorsMap[i][j];
-            context.fillRect(j * CELL_WIDTH, i * CELL_WIDTH, CELL_WIDTH, CELL_WIDTH);
+            context.fillRect(j * CELL_WIDTH + (canvas.width - CELL_WIDTH * MAX_WIDTH) / 2, i * CELL_WIDTH + (canvas.height - CELL_WIDTH * MAX_HEIGHT) / 2, CELL_WIDTH, CELL_WIDTH);
         }
     }
 
     // Вызов повторной отрисовки
-    setTimeout(render, 30);
+    setTimeout(render, 15);
 }
 
 // Инициализация. Вызывается один раз
 function init() {
     canvas.width  = window.innerWidth;
     canvas.height = window.innerHeight;
+
+    network = new Network();
+    network.init();
 
     player = new Player();
     player.init();
